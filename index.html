@@ -5,97 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Rabbit Flipbook</title>
 <style>
-  :root { --bg: #000; --ink: #fff; --muted: #555; }
-  html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
-  body { cursor: crosshair; font: 12px/1.4 ui-monospace, Menlo, monospace; color: var(--muted); }
-  #rabbit {
-    position: absolute; left: 0; bottom: 18vh;
-    width: calc(144px * var(--scale, 1.5)); height: auto;
-    image-rendering: pixelated; transform-origin: 50% 100%;
-    user-select: none; pointer-events: none; will-change: transform;
-  }
-  #hint { position: absolute; left: 16px; bottom: 16px; }
+  html, body { margin: 0; height: 100%; background: #000; }
+  body { cursor: crosshair; font: 12px/1.4 ui-monospace, Menlo, monospace; color: #555; }
+  p { position: absolute; left: 16px; bottom: 16px; margin: 0; }
 </style>
 </head>
 <body>
-<img id="rabbit" alt="" src="frames/sit.png">
-<div id="hint">move the cursor left and right</div>
-<script>
-(() => {
-  // Tuning knobs (px are screen pixels).
-  const FRAME_MS   = 72;   // hold per flipbook frame
-  const LEAP_MS    = 210;  // airborne time per hop (leap 140 + descend 70)
-  const DESCEND_AT = 2 / 3; // fraction of the airborne time before the descend frame
-  const HOP_PX     = 150;  // max distance per hop
-  const FOLLOW_PX  = 140;  // cursor must stray this far before the rabbit follows
-  const ARRIVE_PX  = 12;   // close enough: stop hopping
-
-  const NAMES = ['sit', 'settle', 'land', 'crouch', 'leap', 'descend'];
-  const el = document.getElementById('rabbit');
-  NAMES.forEach(n => { new Image().src = `frames/${n}.png`; });
-
-  // Full-width range: the frames' transparent side margin (~34 of 144 px)
-  // may go off-screen, so the resting rabbit's outline touches each edge.
-  const EDGE_INSET = 34 / 144;
-  const half = () => el.offsetWidth / 2;
-  const reach = () => half() - el.offsetWidth * EDGE_INSET;
-  const clampX = v => innerWidth < 2 * reach() ? innerWidth / 2
-    : Math.max(reach(), Math.min(innerWidth - reach(), v));
-  const target = () => clampX(cursorX);
-
-  let x = clampX(0), facing = 1, cursorX = null, busy = false;
-
-  function draw(name, dir = facing) {
-    if (name) el.src = `frames/${name}.png`;
-    el.style.transform = `translateX(${x - half()}px) scaleX(${dir})`;
-  }
-  const wait = ms => new Promise(r => setTimeout(r, ms));
-  async function frame(name, dir = facing, ms = FRAME_MS) { draw(name, dir); await wait(ms); }
-
-  function leap(dist) {
-    const x0 = x, x1 = clampX(x + dist * facing);
-    draw('leap');
-    return new Promise(done => {
-      const t0 = performance.now();
-      const step = now => {
-        const t = Math.min(1, (now - t0) / LEAP_MS);
-        x = x0 + (x1 - x0) * t;
-        draw(t < DESCEND_AT ? 'leap' : 'descend');
-        t < 1 ? requestAnimationFrame(step) : done();
-      };
-      requestAnimationFrame(step);
-    });
-  }
-
-  async function travel() {
-    busy = true;
-    const dir = Math.sign(target() - x);
-    if (dir && dir !== facing) { facing = dir; draw('sit'); }   // instant flip
-    await frame('settle');                     // in-between: sit -> crouch
-    for (;;) {
-      const rem = (target() - x) * facing;
-      if (rem < ARRIVE_PX) break;              // arrived, or cursor went behind us
-      const hops = Math.ceil(rem / HOP_PX);    // even hops, no stubby last one
-      await frame('crouch');
-      await leap(rem / hops);
-      await frame('land', facing, FRAME_MS * 1.3);
-    }
-    await frame('settle');                     // in-between: land -> sit
-    await frame('sit');
-    busy = false;
-  }
-
-  function tick() {
-    if (!busy && cursorX !== null && Math.abs(target() - x) > FOLLOW_PX) travel();
-    requestAnimationFrame(tick);
-  }
-
-  addEventListener('pointermove', e => { cursorX = e.clientX; }, { passive: true });
-  addEventListener('pointerdown', e => { cursorX = e.clientX; }, { passive: true });
-  addEventListener('resize', () => { x = clampX(x); draw(); });
-  draw('sit');
-  tick();
-})();
-</script>
+<p>move the cursor left and right</p>
+<!-- The whole embed: one script tag. -->
+<script src="rabbit.js" defer></script>
 </body>
 </html>

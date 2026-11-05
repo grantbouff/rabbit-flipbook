@@ -28,6 +28,7 @@ OUT = ROOT / "frames"
 CELL = 3
 GRID = 48
 BASE_ROW = 42  # first empty grid row under the sit frame's feet
+SHEET_ORDER = ("sit", "settle", "crouch", "leap", "descend", "land")
 
 # Three-quarter view: far ear peeks behind near ear, both eyes visible,
 # muzzle still points right, paws centred under the chest.
@@ -163,6 +164,11 @@ def main():
     place(SRC / "descend-raw.png", centre_x=72, bottom_y=122).save(OUT / "descend.png")
     render(parse(TURN1)).save(OUT / "turn1.png")
     render(parse_half(TURN2_HALF)).save(OUT / "turn2.png")
+    # One horizontal strip for rabbit.js; ORDER must match SHEET in rabbit.js.
+    sheet = Image.new("RGBA", (144 * len(SHEET_ORDER), 144), (0, 0, 0, 0))
+    for i, name in enumerate(SHEET_ORDER):
+        sheet.alpha_composite(Image.open(OUT / f"{name}.png").convert("RGBA"), (144 * i, 0))
+    sheet.save(OUT / "rabbit-sheet.png", optimize=True)
     print("wrote", sorted(p.name for p in OUT.glob("*.png")))
 
 
